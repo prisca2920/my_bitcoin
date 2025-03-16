@@ -1,0 +1,90 @@
+import hashlib
+import ecdsa  # Install with `pip install ecdsa`
+import os
+
+# Step 1: Generate 3 key pairs
+def generate_key_pair():
+    private_key = os.urandom(32)  # 256-bit random private key
+    sk = ecdsa.SigningKey.from_string(private_key, curve=ecdsa.SECP256k1)
+    public_key = sk.get_verifying_key().to_string("compressed")  # Compressed format
+    return private_key, public_key
+
+# Generate 3 key pairs
+key_pairs = [generate_key_pair() for _ in range(3)]
+private_keys = [key[0] for key in key_pairs]
+public_keys = [key[1] for key in key_pairs]
+
+print("Private Keys:")
+for i, priv_key in enumerate(private_keys):
+    print(f"Key {i + 1}: {priv_key.hex()}")
+
+print("\nPublic Keys:")
+for i, pub_key in enumerate(public_keys):
+    print(f"Key {i + 1}: {pub_key.hex()}")
+
+# Step 2: Build the 2-of-3 multisig locking script
+locking_script = [
+    "OP_2",
+    public_keys[0].hex(),  # PubKey 1
+    public_keys[1].hex(),  # PubKey 2
+    public_keys[2].hex(),  # PubKey 3
+    "OP_3",
+    "OP_CHECKMULTISIG"
+]
+
+print("\nLocking Script:", locking_script)
+
+# Step 3: Simulate spending with 2 signatures
+# Dummy message to sign (in practice, this would be the transaction data)
+message = b"dummy_message"
+
+# Generate signatures using the first two private keys
+signatures = []
+for i in range(2):
+    sk = ecdsa.SigningKey.from_string(private_keys[i], curve=ecdsa.SECP256k1)
+    signature = sk.sign(message)
+    signatures.append(signature.hex())
+
+# Unlocking script: OP_0 <sig1> <sig2>
+unlocking_script = [
+    "OP_0",  # OP_0 is a workaround for a bug in OP_CHECKMULTISIG
+    signatures[0],  # Signature 1
+    signatures[1]   # Signature 2
+]
+
+print("\nUnlocking Script:", unlocking_script)
+
+# Step 4: Write a function to validate the multisig script execution
+def execute_multisig_script(unlocking_script, locking_script):
+    stack = []
+
+    # Process unlocking script
+    for item in unlocking_script:
+        stack.append(item)  # Push OP_0 and signatures onto the stack
+
+    # Process locking script
+    for op in locking_script:
+        if op.startswith("OP_"):
+            if op == "OP_2":
+                stack.append(2)  # Push the number of required signatures
+            elif op == "OP_3":
+                stack.append(3)  # Push the total number of public keys
+            elif op == "OP_CHECKMULTISIG":
+                # Pop the total number of public keys
+                num_pubkeys = int(stack.pop())
+                # Pop the public keys
+                pubkeys = [stack.pop() for _ in range(num_pubkeys)]
+                # Pop the number of required signatures
+                num_signatures = int(stack.pop())
+                # Pop the signatures (including the dummy OP_0)
+                signatures = [stack.pop() for _ in range(num_signatures + 1)]
+                # Simulate signature verification (always return True for this example)
+                return True
+        else:
+            stack.append(op)  # Push data onto the stack
+
+    return False  # If we reach here, validation failed
+
+# Test the script execution
+is_valid = execute_multisig_script(unlocking_script, locking_script)
+print("\nMultisig Script Validation Result:", is_valid)
