@@ -1,0 +1,212 @@
+import hashlib
+import ecdsa  # Install with `pip install ecdsa`
+import os
+
+# Step 1: Generate a private key, public key, and public key hash
+def generate_key_pair():
+    # Generate a private key
+    private_key = os.urandom(32)  # 256-bit random private key
+    # Derive the public key
+    sk = ecdsa.SigningKey.from_string(private_key, curve=ecdsa.SECP256k1)
+    public_key = sk.get_verifying_key().to_string("compressed")  # Compressed format
+    # Hash the public key (SHA-256 followed by RIPEMD-160)
+    sha256 = hashlib.sha256(public_key).digest()
+    ripemd160 = hashlib.new('ripemd160', sha256).digest()
+    pubkey_hash = ripemd160
+    return private_key, public_key, pubkey_hash
+
+# Generate key pair and public key hash
+private_key, public_key, pubkey_hash = generate_key_pair()
+
+print("Private Key:", private_key.hex())
+print("Public Key:", public_key.hex())
+print("Public Key Hash:", pubkey_hash.hex())
+
+# Step 2: Construct the P2PKH locking script
+locking_script = [
+    "OP_DUP",
+    "OP_HASH160",
+    pubkey_hash.hex(),  # Use the actual pubkey hash
+    "OP_EQUALVERIFY",
+    "OP_CHECKSIG"
+]
+
+print("\nLocking Script:", locking_script)
+
+# Step 3: Simulate the unlocking script
+# Dummy signature and public key (for simulation purposes)
+dummy_signature = b"dummy_signature"
+dummy_public_key = public_key  # Use the actual public key
+
+unlocking_script = [
+    dummy_signature.hex(),
+    dummy_public_key.hex()
+]
+
+print("\nUnlocking Script:", unlocking_script)
+
+# Step 4: Write a function to execute the script
+def execute_script(unlocking_script, locking_script):
+    stack = []
+
+    # Process unlocking script
+    for item in unlocking_script:
+        stack.append(item)  # Push signature and public key onto the stack
+
+    # Process locking script
+    for op in locking_script:
+        if op.startswith("OP_"):
+            if op == "OP_DUP":
+                stack.append(stack[-1])  # Duplicate the top item
+            elif op == "OP_HASH160":
+                top_item = bytes.fromhex(stack.pop())
+                sha256 = hashlib.sha256(top_item).digest()
+                ripemd160 = hashlib.new('ripemd160', sha256).digest()
+                stack.append(ripemd160.hex())
+            elif op == "OP_EQUALVERIFY":
+                item1 = stack.pop()
+                item2 = stack.pop()
+                if item1 != item2:
+                    return False  # Validation failed
+            elif op == "OP_CHECKSIG":
+                # In a real implementation, this would verify the signature against the public key
+                # For simulation, assume it passes
+                return True
+        else:
+            stack.append(op)  # Push data onto the stack
+
+    return False  # If we reach here, validation failed
+
+# Test the script execution
+is_valid = execute_script(unlocking_script, locking_script)
+
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+print("\nScript Validation Result:", is_valid)
